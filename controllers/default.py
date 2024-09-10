@@ -20,9 +20,12 @@ def check(form):
         form.errors.name1 = "These inputs do not form a valid pair"
         form.errors.name2 = "These inputs do not form a valid pair"
 
-possible_inputs = [('Density (mass) [m^3/kg]', 'Dmass'),
+possible_inputs = [('Specific Volume (mass) [m^3/kg]', 'Dmass'),
+                   ('Density (mass) [kg/m^3]', 'Dmass'),
                    ('Pressure [Pa]', 'P'),
+                   ('Pressure [KPa]', 'P'),
                    ('Temperature [C]', 'T'),
+                   ('Temperature [K]', 'T'),
                    ('Enthalpy [J/kg]', 'Hmass'),
                    ('Entropy [J/kg/K]', 'Smass'),
                    ('Internal Energy [J/kg]', 'Umass'),
@@ -43,7 +46,7 @@ def index():
     """
     """
     form=FORM(TABLE(TR("Fluid",SELECT(*fluids,_name="fluid",value="Ammonia", requires=IS_IN_SET(fluids))),
-                    TR("Input #1",SELECT(*input_long_strings,_name="name1",value="Pressure [Pa]", requires=IS_IN_SET(input_long_strings))),
+                    TR("Input #1",SELECT(*input_long_strings,_name="name1",value="Pressure [KPa]", requires=IS_IN_SET(input_long_strings))),
                     TR("Value #1",INPUT(_type="text",_name="value1",_value = "101325", requires=IS_FLOAT_IN_RANGE())),
                     TR("Input #2",SELECT(*input_long_strings,_name="name2",value="Temperature [C]", requires=IS_IN_SET(input_long_strings))),
                     TR("Value #2",INPUT(_type="text",_name="value2",_value = "298", requires=IS_FLOAT_IN_RANGE())),
@@ -70,6 +73,12 @@ def next():
     if request.vars.name1 == 'Temperature [C]':
         request.vars.value1 = float(request.vars.value1) + 273
     
+    # Convert KPa to Pa
+    if request.vars.name2 == 'Pressure [KPa]':
+        request.vars.value2 = float(request.vars.value2)*1000
+    if request.vars.name1 == 'Pressure [KPa]':
+        request.vars.value1 = float(request.vars.value1)*1000
+    
     # Convert Density from kg/m^3 to m^3/kg
     if request.vars.name1 == 'Density (mass) [m^3/kg]':
         request.vars.value1 = 1/float(request.vars.value1)
@@ -84,6 +93,7 @@ def next():
     HEOS.update(*CoolProp.CoolProp.generate_update_pair(key1, float(request.vars.value1), key2, float(request.vars.value2)))
 
     entries = [TR("Temperature [K]",HEOS.T()),
+               TR("Temperature [C]",HEOS.T()-273),
                TR("Pressure [Pa]",HEOS.p()),
                TR("Vapor quality [kg/kg]",HEOS.keyed_output(CoolProp.iQ))
                ]
@@ -103,11 +113,14 @@ def next():
     elif request.vars.unit_system == 'Mass-based':
         entries += [
                TR("Density [kg/m3]",HEOS.rhomass()),
+               TR("Specific Mass [m3/kg]",1/HEOS.rhomass()),
                TR("Enthalpy [J/kg]",HEOS.hmass()),
+               TR("Internal Energy [J/kg]",HEOS.umass()),
                TR("Entropy [J/kg/K]",HEOS.smass()),
                TR("Constant-pressure specific heat [J/kg/K]",HEOS.cpmass()),
                TR("Constant-volume specific heat [J/kg/K]",HEOS.cvmass())
         ]
+    
     else:
         raise ValueError
         
