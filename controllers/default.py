@@ -20,9 +20,9 @@ def check(form):
         form.errors.name1 = "These inputs do not form a valid pair"
         form.errors.name2 = "These inputs do not form a valid pair"
 
-possible_inputs = [('Density (mass) [kg/m^3]', 'Dmass'),
+possible_inputs = [('Density (mass) [m^3/kg]', 'Dmass'),
                    ('Pressure [Pa]', 'P'),
-                   ('Temperature [K]', 'T'),
+                   ('Temperature [C]', 'T'),
                    ('Enthalpy [J/kg]', 'Hmass'),
                    ('Entropy [J/kg/K]', 'Smass'),
                    ('Internal Energy [J/kg]', 'Umass'),
@@ -45,7 +45,7 @@ def index():
     form=FORM(TABLE(TR("Fluid",SELECT(*fluids,_name="fluid",value="Ammonia", requires=IS_IN_SET(fluids))),
                     TR("Input #1",SELECT(*input_long_strings,_name="name1",value="Pressure [Pa]", requires=IS_IN_SET(input_long_strings))),
                     TR("Value #1",INPUT(_type="text",_name="value1",_value = "101325", requires=IS_FLOAT_IN_RANGE())),
-                    TR("Input #2",SELECT(*input_long_strings,_name="name2",value="Temperature [K]", requires=IS_IN_SET(input_long_strings))),
+                    TR("Input #2",SELECT(*input_long_strings,_name="name2",value="Temperature [C]", requires=IS_IN_SET(input_long_strings))),
                     TR("Value #2",INPUT(_type="text",_name="value2",_value = "298", requires=IS_FLOAT_IN_RANGE())),
                     TR("Output Units",SELECT('Mass-based', 'Mole-based', _name="unit_system")),
                     TR("",INPUT(_type="submit",_value="SUBMIT"))
@@ -63,6 +63,19 @@ def next():
 
     # Create the state
     HEOS = CoolProp.AbstractState("HEOS", fluid)
+
+    # Convert Celcius to Kelvin
+    if request.vars.name2 == 'Temperature [C]':
+        request.vars.value2 = float(request.vars.value2) + 273
+    if request.vars.name1 == 'Temperature [C]':
+        request.vars.value1 = float(request.vars.value1) + 273
+    
+    # Convert Density from kg/m^3 to m^3/kg
+    if request.vars.name1 == 'Density (mass) [m^3/kg]':
+        request.vars.value1 = 1/float(request.vars.value1)
+    if request.vars.name2 == 'Density (mass) [m^3/kg]]':
+        request.vars.value2 = 1/float(request.vars.value2)
+
     # Convert input strings to keys
     key1 = CoolProp.CoolProp.get_parameter_index(input_longname_to_key[request.vars.name1])
     key2 = CoolProp.CoolProp.get_parameter_index(input_longname_to_key[request.vars.name2])
