@@ -29,6 +29,7 @@ possible_inputs = [('Specific Volume (mass) [m^3/kg]', 'Dmass'),
                    ('Enthalpy [J/kg]', 'Hmass'),
                    ('Entropy [J/kg/K]', 'Smass'),
                    ('Internal Energy [J/kg]', 'Umass'),
+                   ('Internal Energy [KJ/kg]', 'Umass'),
                    ('Vapor Quality [kg/kg]', 'Q')
                    ]
 input_long_strings, input_key_strings = zip(*possible_inputs)
@@ -72,18 +73,24 @@ def next():
         request.vars.value2 = float(request.vars.value2) + 273
     if request.vars.name1 == 'Temperature [C]':
         request.vars.value1 = float(request.vars.value1) + 273
-    
+
     # Convert KPa to Pa
     if request.vars.name2 == 'Pressure [KPa]':
         request.vars.value2 = float(request.vars.value2)*1000
     if request.vars.name1 == 'Pressure [KPa]':
         request.vars.value1 = float(request.vars.value1)*1000
-    
-    # Convert Density from kg/m^3 to m^3/kg
-    if request.vars.name1 == 'Density (mass) [m^3/kg]':
+
+    # Convert Specific Volume from m^3/kg to kg/m^3
+    if request.vars.name1 == 'Specific Volume (mass) [m^3/kg]':
         request.vars.value1 = 1/float(request.vars.value1)
-    if request.vars.name2 == 'Density (mass) [m^3/kg]]':
+    if request.vars.name2 == 'Specific Volume (mass) [m^3/kg]':
         request.vars.value2 = 1/float(request.vars.value2)
+
+    # Convert Internal Energy from KJ/kg to J/kg
+    if request.vars.name1 == 'Internal Energy [KJ/kg]':
+        request.vars.value1 = 1000*float(request.vars.value1)
+    if request.vars.name2 == 'Internal Energy [KJ/kg]':
+        request.vars.value2 = 1000*float(request.vars.value2)
 
     # Convert input strings to keys
     key1 = CoolProp.CoolProp.get_parameter_index(input_longname_to_key[request.vars.name1])
@@ -95,13 +102,14 @@ def next():
     entries = [TR("Temperature [K]",HEOS.T()),
                TR("Temperature [C]",HEOS.T()-273),
                TR("Pressure [Pa]",HEOS.p()),
+               TR("Pressure [KPa]",HEOS.p()/1000),
                TR("Vapor quality [kg/kg]",HEOS.keyed_output(CoolProp.iQ))
                ]
     try:
         entries.append(TR("Speed of sound [m/s]", HEOS.speed_sound()))
     except:
         entries.append(TR("Speed of sound [m/s]", "Not valid"))
-        
+
     if request.vars.unit_system == 'Mole-based':
         entries += [
                TR("Density [mol/m3]",HEOS.rhomolar()),
@@ -113,17 +121,18 @@ def next():
     elif request.vars.unit_system == 'Mass-based':
         entries += [
                TR("Density [kg/m3]",HEOS.rhomass()),
-               TR("Specific Mass [m3/kg]",1/HEOS.rhomass()),
+               TR("Specific Volume [m3/kg]",1/HEOS.rhomass()),
                TR("Enthalpy [J/kg]",HEOS.hmass()),
                TR("Internal Energy [J/kg]",HEOS.umass()),
+               TR("Internal Energy [KJ/kg]",HEOS.umass()/1000),
                TR("Entropy [J/kg/K]",HEOS.smass()),
                TR("Constant-pressure specific heat [J/kg/K]",HEOS.cpmass()),
                TR("Constant-volume specific heat [J/kg/K]",HEOS.cvmass())
         ]
-    
+
     else:
         raise ValueError
-        
+
     form = TABLE(entries)
 
     T = np.linspace(CoolProp.CoolProp.PropsSI(fluid,"Ttriple")+0.1, CoolProp.CoolProp.PropsSI(fluid,"Tcrit")-0.1)
@@ -173,7 +182,7 @@ def call():
     return service()
 
 
-@auth.requires_login() 
+@auth.requires_login()
 def api():
     """
     this is example of API with access control
