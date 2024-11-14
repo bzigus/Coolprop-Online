@@ -23,7 +23,8 @@ response.google_analytics_id = None
 #########################################################################
 
 response.menu = [
-    (T('Home'), False, URL('default', 'index'), [])
+    (T('Home'), False, URL('default', 'index'), []),
+    (T('Thermodynamic Properties'), False, URL('default', 'thermo_properties'), [])
 ]
 
 DEVELOPMENT_MENU = True

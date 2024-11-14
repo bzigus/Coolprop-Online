@@ -1,0 +1,53 @@
+{{extend 'layout.html'}}
+
+<html>
+   <body>
+       <h1>Thermodynamic Properties</h1>
+       <form action="{{=URL('default', 'thermo_properties')}}" method="post">
+           <label for="fluid">Fluid:</label>
+           <select name="fluid" id="fluid">
+               {{for fluid in fluids:}}
+                   <option value="{{=fluid}}">{{=fluid}}</option>
+               {{pass}}
+           </select><br>
+
+           <label for="name1">Input #1:</label>
+           <select name="name1" id="name1">
+               {{for input_long_string in input_long_strings:}}
+                   <option value="{{=input_long_string}}">{{=input_long_string}}</option>
+               {{pass}}
+           </select><br>
+
+           <label for="value1">Value #1:</label>
+           <input type="text" name="value1" id="value1"><br>
+
+           <label for="name2">Input #2:</label>
+           <select name="name2" id="name2">
+               {{for input_long_string in input_long_strings:}}
+                   <option value="{{=input_long_string}}">{{=input_long_string}}</option>
+               {{pass}}
+           </select><br>
+
+           <label for="value2">Value #2:</label>
+           <input type="text" name="value2" id="value2"><br>
+
+           <label for="unit_system">Output Units:</label>
+           <select name="unit_system" id="unit_system">
+               <option value="Mass-based">Mass-based</option>
+               <option value="Mole-based">Mole-based</option>
+           </select><br>
+
+           <label for="original_unit">Original Unit:</label>
+           <input type="text" name="original_unit" id="original_unit"><br>
+
+           <label for="target_unit">Target Unit:</label>
+           <input type="text" name="target_unit" id="target_unit"><br>
+
+           <input type="submit" value="Submit">
+       </form>
+       <br>
+       {{=form}}
+       <br>
+       {{=fig}}
+   </body>
+</html>

@@ -193,3 +193,72 @@ def api():
         '<tablename>': {'GET':{},'POST':{},'PUT':{},'DELETE':{}},
         }
     return Collection(db).process(request,response,rules)
+
+def unit_conversion(value, original_unit, target_unit):
+    conversion_factors = {
+        ('kj/kg', 'j/kg'): 1000,
+        ('j/kg', 'kj/kg'): 0.001,
+        ('kg/m^3', 'g/cm^3'): 0.001,
+        ('g/cm^3', 'kg/m^3'): 1000,
+        # Add more conversion factors as needed
+    }
+    return value * conversion_factors[(original_unit, target_unit)]
+
+def thermo_properties():
+    fluid = request.vars.fluid
+
+    # Create the state
+    HEOS = CoolProp.AbstractState("HEOS", fluid)
+
+    # Convert input strings to keys
+    key1 = CoolProp.CoolProp.get_parameter_index(input_longname_to_key[request.vars.name1])
+    key2 = CoolProp.CoolProp.get_parameter_index(input_longname_to_key[request.vars.name2])
+    # Update it using the input pair that was selected
+    HEOS.update(*CoolProp.CoolProp.generate_update_pair(key1, float(request.vars.value1), key2, float(request.vars.value2)))
+
+    entries = [TR("Temperature [K]",HEOS.T()),
+               TR("Temperature [C]",HEOS.T()-273),
+               TR("Pressure [Pa]",HEOS.p()),
+               TR("Pressure [KPa]",HEOS.p()/1000),
+               TR("Vapor quality [kg/kg]",HEOS.keyed_output(CoolProp.iQ))
+               ]
+    try:
+        entries.append(TR("Speed of sound [m/s]", HEOS.speed_sound()))
+    except:
+        entries.append(TR("Speed of sound [m/s]", "Not valid"))
+
+    if request.vars.unit_system == 'Mole-based':
+        entries += [
+               TR("Density [mol/m3]",HEOS.rhomolar()),
+               TR("Enthalpy [J/mol]",HEOS.hmolar()),
+               TR("Entropy [J/mol/K]",HEOS.smolar()),
+               TR("Constant-pressure specific heat [J/mol/K]",HEOS.cpmolar()),
+               TR("Constant-volume specific heat [J/mol/K]",HEOS.cvmolar())
+               ]
+    elif request.vars.unit_system == 'Mass-based':
+        entries += [
+               TR("Density [kg/m3]",HEOS.rhomass()),
+               TR("Specific Volume [m3/kg]",1/HEOS.rhomass()),
+               TR("Enthalpy [J/kg]",HEOS.hmass()),
+               TR("Internal Energy [J/kg]",HEOS.umass()),
+               TR("Internal Energy [KJ/kg]",HEOS.umass()/1000),
+               TR("Entropy [J/kg/K]",HEOS.smass()),
+               TR("Constant-pressure specific heat [J/kg/K]",HEOS.cpmass()),
+               TR("Constant-volume specific heat [J/kg/K]",HEOS.cvmass())
+        ]
+
+    else:
+        raise ValueError
+
+    form = TABLE(entries)
+
+    T = np.linspace(CoolProp.CoolProp.PropsSI(fluid,"Ttriple")+0.1, CoolProp.CoolProp.PropsSI(fluid,"Tcrit")-0.1)
+    p = CoolProp.CoolProp.PropsSI("P","T",T,"Q",[0]*len(T),fluid)
+    fig, ax = plt.subplots()
+    ax.plot(T, p, 'k-', lw = 2)
+    ax.set_xlabel('Temperature [K]')
+    ax.set_ylabel('Pressure [Pa]')
+    ax.set_yscale('log')
+    fig_html = XML(mpld3.fig_to_html(fig, no_extras=True, template_type = 'simple'))
+    plt.close('all')
+    return dict(form = form, fig = fig_html, fluid = fluid)
