@@ -207,6 +207,9 @@ def unit_conversion(value, original_unit, target_unit):
 def thermo_properties():
     fluid = request.vars.fluid
 
+    if fluid is None:
+        raise ValueError("Fluid cannot be None")
+
     # Create the state
     HEOS = CoolProp.AbstractState("HEOS", fluid)
 
